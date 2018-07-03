@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Curtain Adafruit IO feed loop
+# Control curtains with Google Assistant to IFTTT to Adafruit IO feed
 
 from Adafruit_IO import MQTTClient
 import initiate_curtain
@@ -21,8 +22,6 @@ def disconnect(client):
 	print("Error", time())
 
 
-#TODO restructure when the file is closed, b/c it closes it before it
-# is able to process the file a second time
 def action(client, feed_id, payload, retain):
 	
 	state = initiate_curtain.curtain_is_open()
@@ -44,20 +43,20 @@ def loop():
 	gbl = Vars()
 	
 	while True:
-		# try:
-		print("Client loop begun")
-		client = MQTTClient(gbl.name, gbl.key)
+		try:
+			print("Client loop begun")
+			client = MQTTClient(gbl.name, gbl.key)
 
-		client.on_connect = connect
-		client.on_disconnect = disconnect
-		client.on_message = action
+			client.on_connect = connect
+			client.on_disconnect = disconnect
+			client.on_message = action
 
-		client.connect()
+			client.connect()
 
-		client.loop_blocking()
-		# except:
-		# 	print("Error", time())
-		# 	sleep(5)
+			client.loop_blocking()
+		except:
+			print("Error", time())
+			sleep(5)
 
 
 

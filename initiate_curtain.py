@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-
 # main activation of smart curtain
+
+#TODO implement motor functions
 
 from datetime import datetime
 import os

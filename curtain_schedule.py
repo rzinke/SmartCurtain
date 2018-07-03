@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
-
-#curtain_schedule
+# Program to look at all recorded times, find clusters,
+# determine if cluster is useful for setting time,
+# set times and run loop, open/close based on set times
 
 import calendar
 from datetime import date, datetime, timedelta
@@ -10,7 +11,7 @@ import initiate_curtain
 from time import sleep, time
 
 
-
+""" class instance created for each day of week to hold daily activitiy/create instances """
 class DaysOfWeek:
 	def __init__(self, day):
 		self.day = day
@@ -53,7 +54,7 @@ class Event:
 
 
 
-
+""" object for each centiod """
 class Centoid:
 	def __init__(self, start_center, possessed_times):
 		self.center = start_center
