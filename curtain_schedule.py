@@ -6,7 +6,7 @@ import calendar
 from datetime import date, datetime, timedelta
 import numpy as np
 from sklearn.cluster import KMeans
-import smart_curtain
+import initiate_curtain
 from time import sleep, time
 
 
@@ -62,8 +62,8 @@ class Centoid:
 		self.is_valid = self.check_validity() # is either average of usable points or False
 
 
-""" check if three or more points are within eachother 
-	if they are, returns the average of points """
+	""" check if three or more points are within eachother
+		 if they are, returns the average of points """
 	def check_validity(self):
 		self.possessed_times.sort()
 		time_group = []
@@ -110,7 +110,7 @@ def write_times(objects, file):
 			if objects[line[28:].rstrip('\n')][i].day == day_of_week:
 				if log_is_relevent(log, 4): objects[line[28:].rstrip('\n')][i].times.append(Event(log))
 	# to store files that are longer than 4 weeks, change /weeks_int or delete if statement
-	new = open("previous_events.txt", "w")  #TODO change file name to override used file
+	new = open("log.txt", "w")  #TODO change file name to override used file
 	new.write(to_be_rewritten.rstrip("\n"))
 	new.close()
 
@@ -181,11 +181,11 @@ def main():
 			future_events = ""
 			for event in events:
 				if datetime.strptime(event[:16], "%Y-%m-%d %H:%M") < datetime.now():
-					file = smart_curtain.read_file()
-					if "close" in event and smart_curtain.curtain_is_open(file):
-						smart_curtain.close_window()
-					elif "open" in event and not smart_curtain.curtain_is_open(file):
-						smart_curtain.open_window()
+					state = initiate_curtain.curtain_is_open()
+					if "close" in event and state:
+						initiate_curtain.close_window()
+					elif "open" in event and not state:
+						initiate_curtain.open_window()
 
 				else: future_events += event
 			
