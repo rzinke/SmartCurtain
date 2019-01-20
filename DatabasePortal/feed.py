@@ -43,10 +43,9 @@ def action(client, feed_id, payload, retain):
 
 def loop():
 	gbl = Vars()
-	
+
 	while True:
 		try:
-			
 			print("Client loop begun")
 			client = MQTTClient(gbl.name, gbl.key)
 

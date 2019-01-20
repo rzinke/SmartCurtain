@@ -105,11 +105,11 @@ sudo apt-get -y install libatlas-base-dev
 # install python dependencies
 echo -e '\033[0;44mInstalling Python wheels\033[0;49m'
 if sudo apt-get -y install python3-pip \
-	&& pip3 install -y adafruit-io \
-	&& pip3 install -y RPi.GPIO \
-	&& pip3 install -y numpy \
-	&& pip3 install -y sklearn \
-	&& pip3 install -y mysql-connector;
+	&& yes | pip3 install adafruit-io \
+	&& yes | pip3 install RPi.GPIO \
+	&& yes | pip3 install numpy \
+	&& yes | pip3 install sklearn \
+	&& yes | pip3 install mysql-connector;
 then
 	echo -e '\033[0;42mSuccessfully installed required python dependencies\033[0;49m'
 else
