@@ -1,0 +1,15 @@
+[Unit]
+Description=Create log on start
+After=mysql.service
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/SmartCurtain/feed.py
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=AIO
+User=pi
+Group=pi
+
+[Install]
+WantedBy=multi-user.target

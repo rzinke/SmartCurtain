@@ -1,0 +1,17 @@
+#!/bin/bash
+
+###################################################
+#
+#	-Bash script to change the distance the curtain
+#	 moves when activated
+#
+###################################################
+
+new_dist=$1
+distance_line=$(grep -F "distance =" /home/pi/SmartCurtain/init.py)
+if sed -i -e "s/$distance_line/	distance = $new_dist/g" /home/pi/SmartCurtain/init.py;
+then
+	echo -e "\033[0;42mSuccessfully changed distance to \033[0;44m$new_dist\033[0;49m"
+fi
+
+# created by: MPZinke on 01.19.19

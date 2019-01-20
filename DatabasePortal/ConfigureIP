@@ -1,0 +1,21 @@
+#!/bin/bash
+
+###################################################
+#
+#	-Bash script to edit/add static IP address @
+#	 /etc/dhcpcd.conf
+#
+###################################################
+
+newIP=$1
+if [[ "`cat /etc/dhcpcd.conf`" == *$'\ninterface wlan0'* ]]; then
+        sudo perl -0777 -i -pe "s/(interface wlan0\\n).*(\\nstatic routers=192.168.1.1)/\$1static ip_address=$newIP\$2/s" /etc/dhcpcd.conf
+else
+        echo "interface wlan0
+static ip_address=$newIP
+static routers=192.168.1.1
+static domain_name_servers=192.168.1.1
+" >> /etc/dhcpcd.conf
+fi
+
+# created by: MPZinke on 01.19.19

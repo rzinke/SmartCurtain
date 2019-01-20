@@ -1,0 +1,18 @@
+#!/bin/bash
+
+###################################################
+#
+#	-Bash script to move/edit files, upgrade system
+#	 install dependencies & create services
+#	-Designed to be kept in folder with others &
+#	 be executed from there
+#
+###################################################
+
+read -p 'Password: ' password
+if sudo mysql -uroot -p$password -Dcurtain -e "UPDATE state SET state = CASE state WHEN 'C' THEN 'O' WHEN 'O' THEN 'C' WHEN 'W' THEN 'C' END";
+then
+	echo -e '\033[0;42mSuccessfully switched state\033[0;49m'
+fi
+
+# created by: MPZinke on 01.19.19

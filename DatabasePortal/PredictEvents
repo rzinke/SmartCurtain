@@ -1,0 +1,20 @@
+#!/bin/bash
+
+###################################################
+#
+#	-Bash script to turn on/off predicting future
+#	 events
+#
+###################################################
+
+state=$1
+
+if [ "$state" == "on" ] 
+then
+	sed -i -e "s/if False/if True/g" /home/pi/SmartCurtain/futures.py
+elif [ "$state" == "off" ] 
+then
+	sed -i -e "s/if True/if False/g" /home/pi/SmartCurtain/futures.py
+fi
+
+# created by: MPZinke on 01.19.19
