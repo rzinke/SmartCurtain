@@ -21,7 +21,7 @@ This will do serveral things:
 '
 
 echo -e '\033[0;44mInitiating standard RasPi updates\033[0;49m'
-if sudo apt-get update && sudo apt-get -y upgrade;
+if sudo apt-get -y update && sudo apt-get -y upgrade;
 then
 	echo -e '\033[0;42mFinished updating\033[0;49m'
 else
@@ -62,8 +62,8 @@ read -p 'Password: ' password
 
 # set up mysql 
 echo -e '\033[0;44mSetting up MySQL Server\033[0;49m'
-if sudo apt-get -y install mysql-server \
-	&& sudo mysql -uroot -praspberry -e "create database curtain" \
+if sudo apt-get -y install mariandb \
+	&& sudo mysql -uroot -p$password -e "create database curtain" \
 	&& sudo mysql -uroot -p$password curtain < ./curtain.sql \
 	&& sudo mysql -uroot -p$password -e "CREATE USER 'pi'@'%';" \
 	&& sudo mysql -uroot -p$password -e "GRANT ALL PRIVILEGES ON *.* TO 'pi'@'%' REQUIRE NONE WITH GRANT OPTION MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;";
@@ -109,7 +109,7 @@ if sudo apt-get -y install python3-pip \
 	&& yes | pip3 install RPi.GPIO \
 	&& yes | pip3 install numpy \
 	&& yes | pip3 install sklearn \
-	&& yes | pip3 install mysql-connector;
+	&& yes | pip3 install mysql-connector-python;
 then
 	echo -e '\033[0;42mSuccessfully installed required python dependencies\033[0;49m'
 else

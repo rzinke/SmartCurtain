@@ -9,19 +9,21 @@ __author__ = "MPZinke"
 ###################################################
 
 import mysql.connector
-import db_functions
+from db_functions import *
 from time import sleep
 
 
-def initiate(cnx, state):
-	success = True
-	if desired_state_already_achieved(cnx, state) or not db_functions.set_state(cnx, 'W'): return not success
-	motor_control(state == 'C')  # false for open, true for close
-	if not db_functions.set_state(cnx, state) or not db_functions.log_event(cnx, state): success = False
-	if not success:
-		db_functions.error_report(cnx, state)
-		return False
-	return "Curtains successfully changed"
+# check if motor should be used; set DB entries
+def initiate(cnx, cursor, new_state):
+	if already_desired_state(cursor, state): return "Desired state already acheived"
+	elif not set_state(cnx, cursor, 'W'): return "Could not set operational state"
+
+	motor_control(state == 'C')  # false for open, true for close; change to 'O' to reverse direction
+
+	if not set_state(cnx, cursor, new_state): return "Could not set state"
+	elif not log_event(cnx, cursor, state): return "Could not log event"
+
+	return False  # no errors
 
 
 def motor_control(direction):
@@ -49,12 +51,12 @@ def motor_control(direction):
 
 
 
-def desired_state_already_achieved(cnx, desired_state):
-	state = db_functions.get_state(cnx.cursor())
-	if state == 'W':
-		sleep(10)
-		return desired_state_already_achieved(cnx, state)
-	else: return state == desired_state
+def already_desired_state(cursor, desired_state):
+	state = db_functions.curtain_state(cursor)
+	if state is not 'W': return state == desired_state
+
+	sleep(10)  # give pi time to finish process if other script is using motor
+	return already_desired_state(cursor, desired_state)  # recheck 
 
 
 
@@ -62,7 +64,9 @@ def main():
 	if not intiate_curtains('O'): print("Failed")
 	else: print("Success")
 
+
 if __name__ == "__main__":
 	main()
 
-""" created by: MPZinke on 01.09.18 """
+""" created by: MPZinke on 01.09.19
+	edited on: 7.7.19 to fix double activation bug """
