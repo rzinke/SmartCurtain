@@ -113,9 +113,9 @@ def main():
 			if True: furthest_calculated_day = schedule_future_events(cnx, cursor, furthest_calculated_day)
 			future_events = passed_future_events(cursor)
 			for(event_key, event_action, event_time) in future_events:
-				error = initiate(cnx, event_action) or remove_future_event(cnx, cursor, event_key)
+				error = initiate(cnx, cursor, event_action) or remove_future_event(cnx, cursor, event_key)
 				print(error or "Successfully opened curtain")
-				if error: error(cnx, cursor, error, event_action)
+				if error: error_report(cnx, cursor, error, event_action)
 			cnx.close()
 		sleep(3)
 

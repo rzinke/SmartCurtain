@@ -67,8 +67,8 @@ def remove_future_event(cnx, cursor, event_key):
 		query = ("DELETE FROM `future` WHERE `event_key` = '%d';")
 		cursor.execute(query % (event_key))
 		cnx.commit()
-		return True
-	except: return False
+		return None
+	except: return "Could not remove event #"+event_key
 
 
 def set_future_event(cnx, cursor, state, time):

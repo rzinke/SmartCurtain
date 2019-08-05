@@ -15,13 +15,13 @@ from time import sleep
 
 # check if motor should be used; set DB entries
 def initiate(cnx, cursor, new_state):
-	if already_desired_state(cursor, state): return "Desired state already acheived"
+	if already_desired_state(cursor, new_state): return "Desired state already acheived"
 	elif not set_state(cnx, cursor, 'W'): return "Could not set operational state"
 
-	motor_control(state == 'C')  # false for open, true for close; change to 'O' to reverse direction
+	motor_control(new_state == 'C')  # false for open, true for close; change to 'O' to reverse direction
 
 	if not set_state(cnx, cursor, new_state): return "Could not set state"
-	elif not log_event(cnx, cursor, state): return "Could not log event"
+	elif not log_event(cnx, cursor, new_state): return "Could not log event"
 
 	return False  # no errors
 
@@ -52,7 +52,7 @@ def motor_control(direction):
 
 
 def already_desired_state(cursor, desired_state):
-	state = db_functions.curtain_state(cursor)
+	state = current_state(cursor)
 	if state is not 'W': return state == desired_state
 
 	sleep(10)  # give pi time to finish process if other script is using motor
