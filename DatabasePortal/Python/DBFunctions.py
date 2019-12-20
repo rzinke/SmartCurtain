@@ -132,5 +132,5 @@ def start_connection():
 						                              database=DB_NAME)
 		return cnx
 	except Exception as error:
-		ErrorWriter.write_error("start_connection", str(error))
+		ErrorWriter.write_error(error)
 		return None

@@ -13,13 +13,23 @@ __author__ = "MPZinke"
 #
 ###########################################################################
 
+import RPi.GPIO as GPIO
+from time import sleep
+
 from Definitions import *
 import ErrorWriter
 
 
+# —————————————————— UTILITY ——————————————————
+
 #SUGAR: for disabling motor (so that it be manually slid) and return whether it is at the end
 def disable_motor():
-	GPIO.output(ENABLE_PIN, True)  # left without clean up to keep motor disabled
+	GPIO.output(ENABLE_PIN, True)
+
+
+#SUGAR: for enabling motor (so that motor has control)
+def enable_motor():
+	GPIO.output(ENABLE_PIN, False)
 
 
 # general GPIO & pin setup
@@ -38,39 +48,87 @@ def setup_GPIO():
 
 
 # send a pulse to motor, then check whether the curtain has reached fully open/close
-def step_motor_to_steps_or_to_end(opposing_stop_pin, steps_to_move):
+def step_motor_to_location_or_to_end(opposing_stop_pin, steps_to_move):
 	while 0 < steps_to_move:
 		GPIO.output(PULSE_PIN, True)
-		sleep(.0000001)
+		sleep(PULSE_WAIT)
 		GPIO.output(PULSE_PIN, False)
-		sleep(.0000001)
+		sleep(PULSE_WAIT)
 		GPIO.output(PULSE_PIN, True)
-		sleep(.0000001)
+		sleep(PULSE_WAIT)
 		GPIO.output(PULSE_PIN, False)
-		sleep(.0000001)
+		sleep(PULSE_WAIT)
 		GPIO.output(PULSE_PIN, True)
-		sleep(.0000001)
+		sleep(PULSE_WAIT)
 		GPIO.output(PULSE_PIN, False)
-		sleep(.0000001)
+		sleep(PULSE_WAIT)
 		steps_to_move -= 3
 		if GPIO.input(opposing_stop_pin): return steps_to_move  # check reached end of span
 
 	return 0
 		
 
+# ——————————————— RUNNING FUNCTIONS ———————————————
 
 # main activation function
 def move_curtain(direction, steps_to_move, stop_pin):
-	# position is approaching 0 (closed) if negative steps; else increasing position (open)
-	stop_pin = CLOSED_STOP_PIN if steps_to_move < 0 else OPEN_STOP_PIN
-
-	import RPi.GPIO as GPIO
 	setup_GPIO()
 
 	# run motor
-	GPIO.output(ENABLE_PIN, False)  # VERY NECESSARY: lets driver have control
+	enable_motor()  # VERY NECESSARY: lets driver have control
 	GPIO.output(DIRECTION_PIN, direction)
-	end_count = step_motor_to_steps_or_to_end(stop_pin, abs(steps_to_move))
+	end_count = step_motor_to_location_or_to_end(stop_pin, abs(steps_to_move))
+
+	disable_motor()  # left without clean up to keep motor disabled
+	return end_count  # return final number of steps not taken
+
+
+
+def close_curtain(direction):
+	setup_GPIO()
+
+	# run motor
+	enable_motor()  # VERY NECESSARY: lets driver have control
+	GPIO.output(DIRECTION_PIN, direction)
+
+	while True:
+		GPIO.output(PULSE_PIN, True)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, False)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, True)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, False)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, True)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, False)
+		sleep(PULSE_WAIT)
+		if GPIO.input(CLOSED_STOP_PIN): break
 
 	disable_motor()
-	return end_count  # return final number of steps not taken
+
+
+def open_curtain(direction):
+	setup_GPIO()
+
+	# run motor
+	enable_motor()  # VERY NECESSARY: lets driver have control
+	GPIO.output(DIRECTION_PIN, direction)
+
+	while True:
+		GPIO.output(PULSE_PIN, True)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, False)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, True)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, False)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, True)
+		sleep(PULSE_WAIT)
+		GPIO.output(PULSE_PIN, False)
+		sleep(PULSE_WAIT)
+		if GPIO.input(OPEN_STOP_PIN): break
+
+	disable_motor()

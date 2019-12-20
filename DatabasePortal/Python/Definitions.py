@@ -36,8 +36,10 @@ DIRECTION_PIN = 7
 PULSE_PIN = 11
 ENABLE_PIN = 13
 
-OPEN_STOP_PIN = None  #TODO
-CLOSED_STOP_PIN = None  #TODO
+OPEN_STOP_PIN = 16
+CLOSED_STOP_PIN = 18
+
+PULSE_WAIT = .0000001
 
 
 # ————————————————— DATABASE ——————————————————
@@ -47,9 +49,6 @@ DB_USER = "python_db_user"
 DB_PASSWD = ""
 DB_IP = "localhost"
 DB_PORT = 3306
-#TESTING
-DB_PASSWD = "guest"
-DB_USER = "zinke"
 
 
 # —————————————————— OTHER ———————————————————

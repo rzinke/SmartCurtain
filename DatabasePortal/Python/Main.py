@@ -25,9 +25,9 @@ import SetCurtain
 
 # —————————————————— UTILITY ——————————————————–
 
-def curtain_final_position(remaining_steps, stop_pin, total_steps):
-	if not remaining_steps: return new_position_steps  # success
-	return total_steps if stop_pin == OPEN_STOP_PIN else 0
+def curtain_final_position(desired_location, remaining_steps, stop_pin, total_steps):
+	if not remaining_steps: return desired_location  # success
+	return total_steps if stop_pin == OPEN_STOP_PIN else 0  # open or closed position
 
 
 #SUGAR: used in if statements: check if value null; if null, sleep; return truthiness
@@ -36,41 +36,45 @@ def is_null_sleep_then(evalutated_value, sleep_amount=5):
 	return not bool(evalutated_value)
 
 
-def needed_steps(cursor, new_percentage_position, total_steps):
+def needed_steps(cursor, new_position, total_steps):
 	current_step_position = DBFunctions.current_position(cursor)
-	new_position_steps = int(new_percentage_position * total_steps / 100)
-	return new_position_steps - current_step_position
+	return new_position - current_step_position
 
 
 
 # ——————————————— PRIMARY PROCESSES ———————————————
 
 # check DB to orient the motor direction, calculate steps & move curtain
-def activate_curtain(cnx, cursor, new_percentage_position):
-	print("Main::activate_curtain()", end=" ")
-	print(new_percentage_position)
+def activate_curtain(cnx, cursor, new_position_steps):
 	total_steps = DBFunctions.curtain_length(cursor)
 	# check if curtain length not set up
 	if not total_steps: CalibrateCurtain.calibrate(cnx, cursor)
 
+	if total_steps - 5 <= new_position_steps:
+		SetCurtain.open_curtain(False ^ DBFunctions.direction(cursor))
+		return DBFunctions.new_position(cnx, cursor, total_steps)
+	elif new_position_steps <= 5:
+		SetCurtain.close_curtain(True ^ DBFunctions.direction(cursor))
+		return DBFunctions.new_position(cnx, cursor, 0)
+
 	# calculate steps needed to take from current position to desired
-	steps_to_move = needed_steps(cursor, new_percentage_position, total_steps)
+	steps_to_move = needed_steps(cursor, new_position_steps, total_steps)
 
 	# move curtain to position: direction based on DB switch
 	direction = (steps_to_move < 0) ^ DBFunctions.direction(cursor)
 	# pin of stop switch, into which curtain can run
+	# position is approaching 0 (closed) if negative steps; else increasing position (open)
 	stop_pin = CLOSED_STOP_PIN if steps_to_move < 0 else OPEN_STOP_PIN
 	remaining_steps = SetCurtain.move_curtain(direction, steps_to_move, stop_pin)
 
-	final_position = curtain_final_position(remaining_steps, stop_pin, total_steps)
+	final_position = curtain_final_position(new_position_steps, remaining_steps, stop_pin, total_steps)
 	DBFunctions.new_position(cnx, cursor, final_position)
 
-	return remaining_steps
+	return remaining_steps  # returned to see whether it failed
 
 
 
 def check_and_run_any_pending_events(cnx, cursor):
-	print("Main::check_and_run_any_pending_events")
 	# get events [(event_key, desire_position)]
 	non_activated_events = DBFunctions.all_non_activated_events(cursor)
 	if non_activated_events:
@@ -99,14 +103,12 @@ def main():
 		try:
 			# main process loop
 			while True:
-				print("Main::process loop")
 				cnx = DBFunctions.start_connection()  # connect
 				if is_null_sleep_then(cnx): continue  # check if connection is established
 				cursor = cnx.cursor(buffered=True)
 
 				if PREDICT_EVENTS: EventPrediction.schedule_future_events(cnx, cursor)
 
-				print("Main::main")
 				remaining_steps = check_and_run_any_pending_events(cnx, cursor)
 				if AUTO_CALIBRATE_IF_CURTAIN_STOPPED:
 					check_if_calibration_necessary(cnx, cursor, remaining_steps)
@@ -116,9 +118,8 @@ def main():
 				sleep(1)  # save some resources
 
 		except Exception as error:
-			try: ErrorWriter.write_error("main", str(error))  # doubly protect main program loop
-			except: print(str(error))  #TESTING
-			# except: pass
+			try: ErrorWriter.write_error(error)  # doubly protect main program loop
+			except: pass
 		sleep(5)  # something messed up; give it time to reset
 
 
