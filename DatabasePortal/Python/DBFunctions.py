@@ -56,7 +56,7 @@ def direction(cursor):
 def events_for_previous_weeks(cursor):
 	from datetime import datetime, timedelta
 	oldest_desired_date = datetime.now() - timedelta(weeks=CLUSTER_SPAN)
-	query = (	"SELECT `desired_position`, `time` FROM `future` \
+	query = (	"SELECT `desired_position`, `time` FROM `events` \
 				WHERE `time` > '%s' AND `time` < CURRENT_TIMESTAMP")
 	cursor.execute(query % (str(oldest_desired_date)))
 	return cursor._rows
@@ -65,7 +65,7 @@ def events_for_previous_weeks(cursor):
 # ———— GETTERS: NON-ACTIVATED EVENTS ————
 
 def all_non_activated_events(cursor):
-	query = (	"SELECT `event_key`, `desired_position` FROM `future` \
+	query = (	"SELECT `event_key`, `desired_position` FROM `events` \
 				WHERE `time` < CURRENT_TIMESTAMP \
 				AND `activated` = FALSE \
 				ORDER BY `time` DESC;")
@@ -74,7 +74,7 @@ def all_non_activated_events(cursor):
 
 
 def newest_non_activated_event(cursor):
-	query = (	"SELECT `event_key`, `desired_position` FROM `future` \
+	query = (	"SELECT `event_key`, `desired_position` FROM `events` \
 				WHERE `time` < CURRENT_TIMESTAMP \
 				AND `activated` = FALSE \
 				ORDER BY `time` DESC LIMIT 1;")
@@ -83,7 +83,7 @@ def newest_non_activated_event(cursor):
 
 
 def oldest_non_activated_event(cursor):
-	query = (	"SELECT `event_key`, `desired_position` FROM `future` \
+	query = (	"SELECT `event_key`, `desired_position` FROM `events` \
 				WHERE `time` < CURRENT_TIMESTAMP \
 				AND `activated` = FALSE \
 				ORDER BY `time` ASC LIMIT 1;")
@@ -94,7 +94,7 @@ def oldest_non_activated_event(cursor):
 # —————————————————— SETTERS ——————————————————
 
 def mark_event_as_activated(cnx, cursor, event_key):
-	query = (	"UPDATE `future` SET `activated` = TRUE \
+	query = (	"UPDATE `events` SET `activated` = TRUE \
 				WHERE `event_key` = '%d';")
 	cursor.execute(query % (event_key))
 	cnx.commit()
@@ -115,11 +115,24 @@ def set_direction_switch(cnx, cursor, switch_value):
 	cnx.commit() 
 
 
-def set_total_steps(cnx, cursor, total_steps):
+def set_curtain_length(cnx, cursor, total_steps):
 	query = (	"UPDATE `curtain_details` SET `curtain_length` = '%d' \
 				WHERE `pseudo_key` = '1';")
 	cursor.execute(query % (total_steps))
 	cnx.commit() 
+
+
+def write_error(cnx, cursor, current, desired, error, module=None):
+	if not module:
+		import traceback
+		module = traceback.format_exc().split("\n")[-4].strip()
+
+	# change delimiter if exists
+	error_message = str(error).replace(DELIMITER, ',' if ',' is not DELIMITER else ' ')
+	query = (	"INSERT INTO `error_log` \
+				(`curtain_position`, `desired_position`, `error`, `path`) VALUES \
+				('%d', '%d', '%s', '%s');")
+	cursor.execute(query % (current, desired, error, module))
 
 
 # ———————————————— CONNECTION —————————————————–

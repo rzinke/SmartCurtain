@@ -41,6 +41,8 @@ CLOSED_STOP_PIN = 18
 
 PULSE_WAIT = .0000001
 
+INTERVAL_BETWEEN_MANUAL_MOVEMENT_CHECKS = 10
+
 
 # ————————————————— DATABASE ——————————————————
 
@@ -53,4 +55,6 @@ DB_PORT = 3306
 
 # —————————————————— OTHER ———————————————————
 
-STOPPED_PERCENT_LENIENCY = 5  # percentage of remaining steps before 
+ERROR_WAIT = 5
+MOTOR_LOOP_RUN_WAIT = 1
+STOPPED_PERCENT_LENIENCY = 5  # percentage of remaining steps before

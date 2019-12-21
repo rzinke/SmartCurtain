@@ -17,33 +17,9 @@ import RPi.GPIO as GPIO
 from time import sleep
 
 from Definitions import *
+import DBFunctions
 import ErrorWriter
-
-# —————————————————— UTILITY ——————————————————
-
-#SUGAR: for disabling motor (so that it be manually slid)
-def disable_motor():
-	GPIO.output(ENABLE_PIN, True)  # left without clean up to keep motor disabled
-
-
-#SUGAR: for enabling motor (so that motor has control)
-def enable_motor():
-	GPIO.output(ENABLE_PIN, False)
-
-
-# general GPIO & pin setup
-def setup_GPIO():
-	GPIO.setwarnings(False)
-	GPIO.cleanup()
-	GPIO.setmode(GPIO.BOARD)
-
-	motor_pins = [DIRECTION_PIN, PULSE_PIN, ENABLE_PIN]  # direction, pulse, enable
-	for pin in motor_pins:
-		GPIO.setup(pin, GPIO.OUT)
-
-	stop_pins = [OPEN_STOP_PIN, CLOSED_STOP_PIN]
-	for pin in stop_pins:
-		GPIO.setup(pin, GPIO.IN)
+import GPIOUtility
 
 
 # ——————————————— KNOWN DIRECTION ————————————————
@@ -71,23 +47,20 @@ def move_to_closed(closed_direction):
 		elif GPIO.input(OPEN_STOP_PIN): raise Exception("Direction is not properly set")
 
 
-
 # strictly for distance calibration (NOT FOR DIRECTION WHICH MUST BE PRESET)
 def calibrate(cnx, cursor):
 	try:
 		import RPi.GPIO as GPIO
-		from DBFunctions import direction, set_total_steps
+		from DBFunctions import direction, set_curtain_length
 
-		setup_GPIO()
-
-		enable_motor()
+		GPIOUtility.enable_motor()
 		closed_direction = direction(cursor)
 		move_to_closed(closed_direction)
 		step_count = count_steps_from_closed_to_open()
-		set_total_steps(cnx, cursor, step_count)  # write count to DB
-		disable_motor()
+		set_curtain_length(cnx, cursor, step_count)  # write count to DB
+		GPIOUtility.disable_motor()
 	except Exception as error:
-		try: disable_motor()
+		try: GPIOUtility.disable_motor()
 		except: pass
 		ErrorWriter.write_error(error)
 
@@ -119,17 +92,14 @@ def move_to_an_end():
 		elif GPIO.input(OPEN_STOP_PIN): return OPEN_STOP_PIN
 
 
-
 def setup(cnx, cursor):
 	import RPi.GPIO as GPIO
-	from DBFunctions import set_direction_switch, set_total_steps
-
-	setup_GPIO()
+	from DBFunctions import set_direction_switch, set_curtain_length
 
 	if GPIO.input(OPEN_STOP_PIN) or GPIO.input(CLOSED_STOP_PIN):
 		raise Exception("To determine direction, curtain cannot be at an end")
 
-	enable_motor()
+	GPIOUtility.enable_motor()
 	# move to end and orient
 	first_stop_pin = move_to_an_end()
 	# True (pin) & going "negative" (CLOSED_STOP_PIN) is `direction` = False
@@ -141,5 +111,36 @@ def setup(cnx, cursor):
 	if OPEN_STOP_PIN == first_stop_pin: opposite_pin = CLOSED_STOP_PIN 
 	else: opposite_pin = OPEN_STOP_PIN
 	step_count = count_steps_to_end(opposite_pin)
-	set_total_steps(cnx, cursor, step_count)  # write count to DB
-	disable_motor()
+	set_curtain_length(cnx, cursor, step_count)  # write count to DB
+	GPIOUtility.disable_motor()
+
+
+# ——————————————— END CHECKERS —————————————————
+
+# thread to check whether the curtain has manually been moved to either end of curtain
+# do not reset position if already marked as at end
+def manual_move_end_setter():
+	import RPi.GPIO as GPIO
+	from time import sleep
+	from DBFunctions import curtain_length, current_position, set_curtain_length
+
+	while True:
+		cnx = DBFunctions.start_connection()
+		if not cnx: continue
+		cursor = cnx.cursor(buffered=True)
+
+		if GPIO.input(ENABLE_PIN):  # motor is currently activated; wait before next check
+			sleep(INTERVAL_BETWEEN_MANUAL_MOVEMENT_CHECKS)
+
+		length = curtain_length(cursor)
+		position = current_position(cursor)
+		# if curtain open and position not marked at open end
+		if GPIO.input(OPEN_STOP_PIN) and length != position:
+			set_curtain_length(cnx, cursor, length)
+		# if curtain closed and position not marked at closed end
+		elif GPIO.input(CLOSED_STOP_PIN) and position:
+			set_curtain_length(cnx, cursor, 0)
+
+		sleep(INTERVAL_BETWEEN_MANUAL_MOVEMENT_CHECKS)
+
+		cnx.close()

@@ -13,6 +13,7 @@ __author__ = "MPZinke"
 #
 ###########################################################################
 
+import threading
 from time import sleep
 
 from Definitions import *
@@ -20,6 +21,7 @@ from Definitions import *
 import CalibrateCurtain
 import DBFunctions
 import ErrorWriter
+import GPIOUtility
 import SetCurtain
 
 
@@ -41,8 +43,7 @@ def needed_steps(cursor, new_position, total_steps):
 	return new_position - current_step_position
 
 
-
-# ——————————————— PRIMARY PROCESSES ———————————————
+# ——————————————— PRIMARY PROCESSES ——————————————
 
 # check DB to orient the motor direction, calculate steps & move curtain
 def activate_curtain(cnx, cursor, new_position_steps):
@@ -73,7 +74,6 @@ def activate_curtain(cnx, cursor, new_position_steps):
 	return remaining_steps  # returned to see whether it failed
 
 
-
 def check_and_run_any_pending_events(cnx, cursor):
 	# get events [(event_key, desire_position)]
 	non_activated_events = DBFunctions.all_non_activated_events(cursor)
@@ -93,7 +93,31 @@ def check_if_calibration_necessary(cnx, cursor, remaining_steps):
 	total_steps = DBFunctions.curtain_length(cursor)
 	# check if motor stopped prematurely
 	leniency = STOPPED_PERCENT_LENIENCY * total_steps / 100
-	if leniency < remaining_steps: CalibrateCurtain.calibrate()
+	if leniency < remaining_steps: CalibrateCurtain.calibrate(cnx, cursor)
+
+
+def connect_to_DB():
+	cnx = DBFunctions.start_connection()
+	while is_null_sleep_then(cnx):
+		cnx = DBFunctions.start_connection()  # connect
+	cursor = cnx.cursor(buffered=True)
+	return cnx, cursor
+
+
+def primary_curtain_process():
+	# main process loop
+	while True:
+		cnx, cursor = connect_to_DB()
+
+		if PREDICT_EVENTS: EventPrediction.schedule_future_events(cnx, cursor)
+
+		remaining_steps = check_and_run_any_pending_events(cnx, cursor)
+		if AUTO_CALIBRATE_IF_CURTAIN_STOPPED:
+			check_if_calibration_necessary(cnx, cursor, remaining_steps)
+
+		sleep(MOTOR_LOOP_RUN_WAIT)  # save some resources
+
+		cnx.close()
 
 
 
@@ -101,26 +125,23 @@ def main():
 	# program loop
 	while True:
 		try:
-			# main process loop
-			while True:
-				cnx = DBFunctions.start_connection()  # connect
-				if is_null_sleep_then(cnx): continue  # check if connection is established
-				cursor = cnx.cursor(buffered=True)
+			GPIOUtility.setup_GPIO()
+			GPIOUtility.disable_motor()  # on program start, allow for manual movement
 
-				if PREDICT_EVENTS: EventPrediction.schedule_future_events(cnx, cursor)
+			process_thread = threading.Thread(target=primary_curtain_process) 
+			manual_move_thread = threading.Thread(
+										target=CalibrateCurtain.manual_move_end_setter) 
 
-				remaining_steps = check_and_run_any_pending_events(cnx, cursor)
-				if AUTO_CALIBRATE_IF_CURTAIN_STOPPED:
-					check_if_calibration_necessary(cnx, cursor, remaining_steps)
-
-				cnx.close()
-
-				sleep(1)  # save some resources
+			for thread in [process_thread, manual_move_thread]:
+				thread.start()
+				thread.join()
 
 		except Exception as error:
-			try: ErrorWriter.write_error(error)  # doubly protect main program loop
-			except: pass
-		sleep(5)  # something messed up; give it time to reset
+			try:
+				ErrorWriter.write_error(error)  # doubly protect main program loop
+				write_error(cnx, cursor, current, desired, error)
+			except: print(error)
+		sleep(ERROR_WAIT)  # something messed up; give it time to reset
 
 
 if __name__ == '__main__':
