@@ -32,13 +32,17 @@ class Centoid:
 		 if they are, returns the average of points """
 	def check_validity(self):
 		while True:
-			surrounding_times = [time for time in self.possessed_times if((self.avg-.5) < time < (self.avg+.5))]
+			surrounding_times = self.times_surrounding_average()
 			avg_of_surroundings = sum(surrounding_times) / len(surrounding_times)
 			if avg_of_surroundings == self.avg: break
 			self.avg = avg_of_surroundings
 		if len(surrounding_times) > 2: return True
 		return False
 
+
+	def times_surrounding_average(self):
+		return [time for time in self.possessed_times if((self.avg - CLUSTER_TIME_SPREAD) < time
+											and time < (self.avg + CLUSTER_TIME_SPREAD))]
 
 
 def possible_centroid_count(events):
@@ -57,7 +61,7 @@ def convert_decimal_value_of_day_to_time(times):
 
 # convert decimal time to a datetime object
 def covert_time_datetime(day, times):
-	return [datetime.strptime(day.date().strftime("%Y-%m-%d ")+time, '%Y-%m-%d %H:%M:%S') for time in times]
+	return [datetime.strptime(day.date().strftime("%Y-%m-%d ")+time, DATETIME_STRING_FORMAT) for time in times]
 
 
 # decimal value of time for mathmatical calculation of centroid
@@ -80,10 +84,9 @@ def create_centroids(decimal_times, k_value):
 
 
 # use kmeans to calculate possible future events for logged times in time frame
-def schedule_future_events(cnx, cursor, furthest_calculated_day):
-	# calcuate up through the next 7 days
-	for x in range((furthest_calculated_day - datetime.now()).days+2, 8):
-		for state in ['C', 'O']:
+def schedule_future_events():
+		# calcuate up through the next 7 days
+		for x in range(1, 8):
 			day = (datetime.now() + timedelta(days=x))  # formated to mysql (Monday:1, Tuesday:2,...Sunday:7)
 			previous_events = events_for_day_of_week(cnx, day.weekday(), state)
 
@@ -98,5 +101,16 @@ def schedule_future_events(cnx, cursor, furthest_calculated_day):
 			
 			for event in future_events: set_future_event(cnx, cursor, state, time)
 
-		furthest_calculated_day = datetime.now() + timedelta(days=x)
-	return furthest_calculated_day
+
+def predictor_loop():
+	from DBFunction import connect_to_DB, event_predition
+
+	while True:
+		cnx, cursor = connect_to_DB()
+
+		if event_predition():
+			schedule_future_events()
+			sleep(EVENT_PREDICTION_SLEEP)
+
+		cnx.close()
+		sleep(EVENT_PREDICTION_CHECK_SLEEP)
