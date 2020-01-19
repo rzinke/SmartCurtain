@@ -115,34 +115,22 @@ def setup(cnx, cursor):
 	GPIOUtility.disable_motor()
 
 
-# —————————————— MAIN CALIBRATION —————————————————
-
-def calibrate_if_necessary(cnx, cursor, remaining_steps):
-	from DBFunctions import curtain_length
-
-	total_steps = curtain_length(cursor)
-	# check if motor stopped prematurely
-	leniency = STOPPED_PERCENT_LENIENCY * total_steps / 100
-	if leniency < remaining_steps: calibrate(cnx, cursor)
-
-
 # ——————————————— END CHECKERS —————————————————
 
 # thread to check whether the curtain has manually been moved to either end of curtain
 # do not reset position if already marked as at end
-def manual_move_loop():
+def manual_move_end_setter():
 	import RPi.GPIO as GPIO
 	from time import sleep
-	from GPIO import motor_is_engaged
-	from DBFunctions import 	connect_to_DB, curtain_length, 
-								current_position, set_curtain_length
+	from DBFunctions import curtain_length, current_position, set_curtain_length
 
 	while True:
-		cnx, cursor = connect_to_DB()
+		cnx = DBFunctions.start_connection()
+		if not cnx: continue
+		cursor = cnx.cursor(buffered=True)
 
-		if motor_is_engaged():  # motor is currently activated; wait before next check
+		if GPIO.input(ENABLE_PIN):  # motor is currently activated; wait before next check
 			sleep(INTERVAL_BETWEEN_MANUAL_MOVEMENT_CHECKS)
-			continue
 
 		length = curtain_length(cursor)
 		position = current_position(cursor)
@@ -153,5 +141,6 @@ def manual_move_loop():
 		elif GPIO.input(CLOSED_STOP_PIN) and position:
 			set_curtain_length(cnx, cursor, 0)
 
-		cnx.close()
 		sleep(INTERVAL_BETWEEN_MANUAL_MOVEMENT_CHECKS)
+
+		cnx.close()

@@ -31,6 +31,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["get_state"]))
 
 // ———— GET EVENTS ————
 
+elseif($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["most_recent_event"]))
+{
+
+}
+
 elseif($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["unactivated_events"]))
 {
 

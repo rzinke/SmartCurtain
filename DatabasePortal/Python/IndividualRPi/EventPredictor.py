@@ -103,15 +103,14 @@ def schedule_future_events():
 
 
 def predictor_loop():
-	from DBFunctions import connect_to_DB, curtain_ids, event_predictor
+	from DBFunctions import connect_to_DB, event_predictor
 
 	while True:
 		cnx, cursor = connect_to_DB()
 
-		for curtain in curtain_ids(cursor):
-			if event_predictor(cursor, curtain):
-				schedule_future_events()
-				sleep(EVENT_PREDICTOR_SLEEP)
+		if event_predictor(cursor):
+			schedule_future_events()
+			sleep(EVENT_PREDICTOR_SLEEP)
 
 		cnx.close()
 		sleep(EVENT_PREDICTOR_CHECK_SLEEP)

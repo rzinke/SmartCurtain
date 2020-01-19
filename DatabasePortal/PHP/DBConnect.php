@@ -14,7 +14,7 @@
 
 try
 {
-	$mysqli = new mysqli('localhost', 'python_db_user', '', 'curtain') or die(mysql_error());
+	$mysqli = new mysqli('localhost', 'php_db_user', '', 'curtain') or die(mysql_error());
 }
 catch (Exception $e)
 {

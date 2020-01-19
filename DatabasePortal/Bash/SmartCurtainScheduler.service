@@ -1,9 +1,9 @@
 [Unit]
-Description=Create log on start
-After=mysql.service
+Description=Main Smart Curtain Scheduler
+After=mariadb.service
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/SmartCurtain/futures.py
+ExecStart=/usr/bin/python3 /home/pi/SmartCurtain/Main.py
 Restart=always
 StandardOutput=syslog
 StandardError=syslog

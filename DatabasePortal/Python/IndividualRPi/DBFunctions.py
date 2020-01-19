@@ -8,7 +8,7 @@ __author__ = "MPZinke"
 #	on ..
 #
 #	DESCRIPTION: Function library to pull from curtain.sql to get/set values & events.
-#						`curtains` table should contain 1 entry for storing primary curtain
+#						`curtain_details` table should contain 1 entry for storing primary curtain
 #						data.
 #	BUGS:
 #	FUTURE:
@@ -21,99 +21,93 @@ import ErrorWriter
 
 # —————————————————— GETTERS ——————————————————
 
-def current_position(cursor, curtain):
-	query = (	"SELECT `curtain_position` FROM `curtains` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+def current_position(cursor):
+	query = (	"SELECT `curtain_position` FROM `curtain_details` \
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
-def curtain_ids(cursor):
-	query = (	"SELECT `curtain_id` FROM `curtains`;")
-	cursor.execute(query)
-	return [curtain[0] for curtain in cursor._rows]	
-
-
 # get number of stepper motor steps from one side of the curtain to the other (open vs closed)
-def curtain_length(cursor, curtain):
-	query = (	"SELECT `curtain_length` FROM `curtains` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+def curtain_length(cursor):
+	query = (	"SELECT `curtain_length` FROM `curtain_details` \
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
 # bool for if the curtain's desired position is current catalogued position 
-def desire_position_does_not_equal_current(cursor, curtain, desired):
-	query = (	"SELECT `curtain_position` FROM `curtains` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+def desire_position_does_not_equal_current(cursor, desired):
+	query = (	"SELECT `curtain_position`FROM `curtain_details` \
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	current = cursor._rows[0][0]
 	if not current: return 5 < desired
 	return 5 < (abs(current - desired) / current)
 
 
-def direction(cursor, curtain):
-	query = (	"SELECT `curtain_direction` FROM `curtains` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+def direction(cursor):
+	query = (	"SELECT `curtain_direction` FROM `curtain_details` \
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
 # BOOL/INT: check for practical purposes if an event (same position) is already set
-def event_set_at_approximate_time(cursor, curtain, event, time):
+def event_set_at_approximate_time(cursor, event, time):
 	from datetime import timedelta
 	time_lower_bound = time - timedelta(seconds=SAME_EVENT_TIME_DIFFERENCE)
 	time_upper_bound = time + timedelta(seconds=SAME_EVENT_TIME_DIFFERENCE)
 	query = (	"SELECT * FROM `events` \
 				WHERE `event_time` > '%s' AND `event_time` < '%s' \
-				AND `event_position` = '%d' \
-				AND `curtain_id` = '%d';")
-	cursor.execute(query % (	time_lower_bound, time_upper_bound,
-								event, curtain))
+				AND `event_position` = '%d';")
+	cursor.execute(query % (	time_lower_bound,
+								time_upper_bound,
+								event))
 	return cursor.rowcount
 
 
 # —————————————————— OPTIONS ——————————————————
 
-def adafruit_feed(cursor, curtain):
+def adafruit_feed(cursor):
 	query = (	"SELECT `adafruit_feed` FROM `options` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
-def auto_calibration(cursor, curtain):
+def auto_calibration(cursor):
 	query = (	"SELECT `auto_calibration` FROM `options` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
-def event_predictor(cursor, curtain):
+def event_predictor(cursor):
 	query = (	"SELECT `event_predictor` FROM `options` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
-def sunrise_open(cursor, curtain):
+def sunrise_open(cursor):
 	query = (	"SELECT `sunrise_open` FROM `options` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
-def sunset_close(cursor, curtain):
+def sunset_close(cursor):
 	query = (	"SELECT `sunset_close` FROM `options` \
-				WHERE `curtain_id` = '%d';")
-	cursor.execute(query % (curtain))
+				WHERE `pseudo_key` = '1';")
+	cursor.execute(query)
 	return cursor._rows[0][0]
 
 
 # —————————————————— EVENTS ——————————————————
 
 def all_non_activated_events(cursor):
-	query = (	"SELECT `event_id`, `event_position` FROM `events` \
+	query = (	"SELECT `event_key`, `event_position` FROM `events` \
 				WHERE `event_time` < CURRENT_TIMESTAMP \
 				AND `event_activated` = FALSE \
 				ORDER BY `event_time` DESC;")
@@ -121,97 +115,76 @@ def all_non_activated_events(cursor):
 	return cursor._rows
 
 
-def events_for_previous_weeks(cursor, curtain):
+def events_for_previous_weeks(cursor):
 	from datetime import datetime, timedelta
 	oldest_desired_date = datetime.now() - timedelta(weeks=CLUSTER_SPAN)
 	query = (	"SELECT `event_position`, `event_time` FROM `events` \
-				WHERE `event_time` > '%s' AND `event_time` < CURRENT_TIMESTAMP \
-				AND `curtain_id` = '%d';")
-	cursor.execute(query % (str(oldest_desired_date), curtain))
+				WHERE `event_time` > '%s' AND `event_time` < CURRENT_TIMESTAMP")
+	cursor.execute(query % (str(oldest_desired_date)))
 	return cursor._rows
 
 
 def newest_non_activated_event(cursor):
-	query = (	"SELECT `event_id`, `event_position` FROM `events` \
+	query = (	"SELECT `event_key`, `event_position` FROM `events` \
 				WHERE `event_time` < CURRENT_TIMESTAMP \
 				AND `event_activated` = FALSE \
 				ORDER BY `event_time` DESC LIMIT 1;")
-	cursor.execute(query % (curtain))
+	cursor.execute(query)
 	return cursor._rows[0]
 
 
-def oldest_non_activated_event(cursor, curtain):
-	query = (	"SELECT `event_id`, `event_position` FROM `events` \
+def oldest_non_activated_event(cursor):
+	query = (	"SELECT `event_key`, `event_position` FROM `events` \
 				WHERE `event_time` < CURRENT_TIMESTAMP \
 				AND `event_activated` = FALSE \
-				AND `curtain_id` = '%d' \
 				ORDER BY `event_time` ASC LIMIT 1;")
-	cursor.execute(query % (curtain))
+	cursor.execute(query)
 	return cursor._rows[0]
 
 
 # —————————————————— SETTERS ——————————————————
 
 # move to DBFunctions.py
-def add_event(cnx, cursor, curtain, event_position, time):
+def add_event(cnx, cursor, event_position, time):
 	query = (	"INSERT INTO `events` \
-				(`curtain_id`, `event_position`, `event_activated`, `event_time`) VALUES \
-				('%d', '%d', FALSE, '%s');")
-	cursor.execute(query % (	curtain, event_position,
-								time.strftime(DATETIME_STRING_FORMAT)))
-	return cnx.commit()
-
-
-def close_immediate_event(cnx, cursor, curtain):
-	query = (	"INSERT INTO `events` \
-				(`curtain_id`, `event_position`, `event_activated`) VALUES \
-				('%d', '%d', FALSE);")
-	cursor.execute(query % (curtain, 0))
-	return cnx.commit()
-
-
-def full_open_immediate_event(cnx, cursor, curtain):
-	length = curtain_length(cursor)
-
-	query = (	"INSERT INTO `events` \
-				(`curtain_id`, `event_position`, `event_activated`) VALUES \
-				('%d', '%d', FALSE);")
-	cursor.execute(query % (curtain, length))
+				(`event_position`, `event_activated`, `event_time`) VALUES \
+				('%d', FALSE, '%s');")
+	cursor.execute(query % (event_position, time.strftime(DATETIME_STRING_FORMAT)))
 	return cnx.commit()
 
 
 def mark_event_as_activated(cnx, cursor, event_key):
 	query = (	"UPDATE `events` SET `event_activated` = TRUE \
-				WHERE `event_id` = '%d';")
+				WHERE `event_key` = '%d';")
 	cursor.execute(query % (event_key))
 	return cnx.commit()
 
 
-# assign the curtain's current position to `curtains`.`curtain_position` in DB
+# assign the curtain's current position to `curtain_details`.`curtain_position` in DB
 def new_position(cnx, cursor, position_in_steps):
-	query = (	"UPDATE `curtains` SET `curtain_position` = '%d' \
-				WHERE `curtain_id` = '%d';")
+	query = (	"UPDATE `curtain_details` SET `curtain_position` = '%d' \
+				WHERE `pseudo_key` = '1';")
 	cursor.execute(query % (position_in_steps))
 	return cnx.commit()
 
 
 def set_current_position(cnx, cursor, position):
-	query = (	"UPDATE `curtains` SET `curtain_position` = '%d' \
-				WHERE `curtain_id` = '%d';")
+	query = (	"UPDATE `curtain_details` SET `curtain_position` = '%d' \
+				WHERE `pseudo_key` = '1';")
 	cursor.execute(query % (position))
 	return cnx.commit() 
 
 
 def set_curtain_length(cnx, cursor, total_steps):
-	query = (	"UPDATE `curtains` SET `curtain_length` = '%d' \
-				WHERE `curtain_id` = '%d';")
+	query = (	"UPDATE `curtain_details` SET `curtain_length` = '%d' \
+				WHERE `pseudo_key` = '1';")
 	cursor.execute(query % (total_steps))
 	return cnx.commit() 
 
 
 def set_direction_switch(cnx, cursor, switch_value):
-	query = (	"UPDATE `curtains` SET `curtain_direction` = '%d' \
-				WHERE `curtain_id` = '%d';")
+	query = (	"UPDATE `curtain_details` SET `curtain_direction` = '%d' \
+				WHERE `pseudo_key` = '1';")
 	cursor.execute(query % (switch_value))
 	return cnx.commit() 
 

@@ -36,10 +36,6 @@ def enable_motor():
 	GPIO.output(ENABLE_PIN, False)
 
 
-def motor_is_engaged():
-	return GPIO.input(ENABLE_PIN)
-
-
 # general GPIO & pin setup
 def setup_GPIO():
 	GPIO.setwarnings(False)  # ignore any important warnings

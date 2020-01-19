@@ -5,14 +5,22 @@
 *	-Called by header.php
 *
 ***************************************************/
+:root {
+	--background_color: #363636;
+}
+
 
 html {
 	font-family: Helvetica;
 	color: #E4E6C6;
 }
 
+.background_color {
+	color: var(--background_color);
+}
+
 .body {
-	background-color: #363636;
+	background-color: var(--background_color);
 	width: 100%;
 	margin: auto;
 	text-align: center;
@@ -21,6 +29,7 @@ html {
 header {
 	text-align: left;
 	width: 100%;
+	background-color: #262626;
 }
 
 #sideMenu {
@@ -55,6 +64,7 @@ header {
 	margin-left: 50px;
 }
 
+
 button:disabled {
 	background-color: #A0B9D0;
 	color: #525252;
@@ -73,6 +83,7 @@ button:disabled {
 	font-size: 16px;
 }
 
+
 .button-danger {
 	background-color: #aa0000;
 }
@@ -88,6 +99,16 @@ button:disabled {
 	border: none;
 	height: 40px;
 	text-align: center;
+}
+
+.select {
+	width: 100%;
+	border-radius: 5px;
+	border: none;
+	height: 40px;
+	text-align: center;
+	color: #FFFFFF;
+	background-color: #000000;
 }
 
 .table {
@@ -139,5 +160,18 @@ button:disabled {
 	background-color: rgb(26, 21, 51);
 	color: #E4E6C6;
 }
+
+
+
+.window_outline {
+	background-color:#111111;
+	margin:auto;
+	position: absolute;
+	width:70%;
+	left:15%;
+	border-radius: 5px;
+	/*border: 3px solid #000000;*/
+}
+
 
 /* created by:MPZinke on 01.10.19 */

@@ -33,19 +33,18 @@ def sunset_time():
 
 
 def sunset_loop():
-	from DBFunctions import 	add_event, connect_to_DB, curtain_ids, \
+	from DBFunctions import 	add_event, connect_to_DB, \
 								event_set_at_approximate_time, sunset_close
 
 	while True:
 		cnx, cursor = connect_to_DB()
 
-		for curtain in curtain_ids(cursor):
-			if sunset_close(cursor, curtain):
-				sunset = sunset_time()
-				if is_null_sleep_then(sunset): continue
-				# check if sunset event already set
-				if not event_set_at_approximate_time(cursor, curtain, 0, sunset):
-					add_event(cnx, cursor, curtain, 0, sunset)
+		if sunset_close(cursor):
+			sunset = sunset_time()
+			if is_null_sleep_then(sunset): continue
+			# check if sunset event already set
+			if not event_set_at_approximate_time(cursor, 0, sunset):
+				add_event(cnx, cursor, 0, sunset)
 
 		sleep(SUNSET_LOOP_WAIT)
 
@@ -66,19 +65,18 @@ def sunrise_time():
 
 
 def sunrise_loop():
-	from DBFunctions import 	add_event, connect_to_DB, curtain_ids, curtain_length, \
+	from DBFunctions import 	add_event, connect_to_DB, curtain_length, \
 								event_set_at_approximate_time, sunrise_open
 
 	while True:
 		cnx, cursor = connect_to_DB()
 
-		for curtain in curtain_ids(cursor):
-			if sunrise_open(cursor, curtain):
-				sunrise = sunrise_time()
-				if is_null_sleep_then(sunrise): continue
-				open_position = curtain_length(cursor)
-				if not event_set_at_approximate_time(cursor, curtain, open_position, sunrise):
-					add_event(cnx, cursor, curtain, open_position, sunrise)
+		if sunrise_open(cursor):
+			sunrise = sunrise_time()
+			if is_null_sleep_then(sunrise): continue
+			open_position = curtain_length(cursor)
+			if not event_set_at_approximate_time(cursor, open_position, sunrise):
+				add_event(cnx, cursor, open_position, sunrise)
 
 		sleep(SUNRISE_LOOP_WAIT)
 

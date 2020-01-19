@@ -21,6 +21,7 @@ from threading import Thread
 from Definitions import *
 import DBFunctions
 import ErrorWriter
+import SetCurtain
 
 # —————————————————— UTILITY ——————————————————–
 
@@ -42,16 +43,18 @@ def disconnect(client):
 
 
 def feed_actions(client, feed_id, payload):
-	from datetime import datetime
+	from GPIOUtility import motor_is_engaged
+	if motor_is_engaged(): return  # motor is currently active; ignore change
 
 	cnx, cursor = DBFunctions.connect_to_DB()
 
-	try: curtain = int(payload)
-	except: return
 	if feed_id == OPEN_KEY:
-		DBFunctions.full_open_immediate_event(cnx, cursor, curtain)
+		try: payload = int(payload)
+		except: return
+		steps = steps_to_take(cursor, payload)
+		SetCurtain.activate(cnx, cursor, steps)
 	elif feed_id == CLOSE_KEY:
-		DBFunctions.close_immediate_event(cnx, cursor, curtain)
+		SetCurtain.close_curtain(1 ^ DBFunctions.direction(cursor))
 
 	cnx.close()
 
@@ -65,21 +68,19 @@ def feed_loop(client):
 	while True:
 		cnx, cursor = DBFunctions.connect_to_DB()
 
-		for curtain in DBFunctions.curtain_ids(cursor):
-			feed_option_is_selected =  DBFunctions.adafruit_feed(cursor, curtain) 
-			if feed_option_is_selected and not client.is_connected():
-				thread = Thread(target=activate_feed, args=(client,))
-				thread.start()
-				thread.join()
-			elif not feed_option_is_selected and client.is_connected():
-				client.disconnect()
+		feed_option_is_selected =  DBFunctions.adafruit_feed(cursor) 
+		if feed_option_is_selected and not client.is_connected():
+			thread = Thread(target=activate_feed, args=(client,))
+			thread.start()
+			thread.join()
+		elif not feed_option_is_selected and client.is_connected():
+			client.disconnect()
 
-		cnx.close()
 		sleep(FEED_CLIENT_CHECK_LOOP)
 
 
 def start_client_loop():
-	client = MQTTClient(USER_FEED_NAME, USER_FEED_KEY)
+	client = MQTTClient(FEED_NAME, FEED_KEY)
 
 	client.on_connect = connect_to_feeds
 	client.on_disconnect = disconnect
